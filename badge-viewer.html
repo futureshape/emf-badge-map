@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Badge Tile Viewer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #111;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    font-family: system-ui, sans-serif;
+    color: #ccc;
+    user-select: none;
+  }
+  #badge {
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid #444;
+    box-shadow: 0 0 30px rgba(0,0,0,0.6);
+    background: #000;
+    position: relative;
+  }
+  #viewport {
+    width: 240px;
+    height: 240px;
+    position: relative;
+  }
+  #viewport img {
+    display: block;
+    image-rendering: pixelated;
+  }
+  #info {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #888;
+  }
+  #info .coord {
+    font-size: 18px;
+    font-weight: bold;
+    color: #eee;
+    font-variant-numeric: tabular-nums;
+  }
+  #help {
+    margin-top: 12px;
+    font-size: 12px;
+    color: #555;
+  }
+  #help kbd {
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: inherit;
+    color: #aaa;
+  }
+</style>
+</head>
+<body>
+
+<div id="badge">
+  <div id="viewport"></div>
+</div>
+<div id="info">
+  <div class="coord" id="coord"></div>
+  <div id="status"></div>
+</div>
+<div id="help">
+  <kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> move (half tile) &nbsp;
+  <kbd>+</kbd><kbd>−</kbd> zoom
+</div>
+
+<script>
+const BBOX = { west: -2.38038, south: 52.03763, east: -2.37295, north: 52.04421 };
+const MIN_ZOOM = 14;
+const MAX_ZOOM = 20;
+const T = 256; // tile size in px
+const STEP = T / 2; // half-tile step
+
+function lngToX(lng, z) { return Math.floor(((lng + 180) / 360) * (1 << z)); }
+function latToY(lat, z) {
+  const r = lat * Math.PI / 180;
+  return Math.floor((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * (1 << z));
+}
+
+// Tile bounds per zoom
+const bounds = {};
+for (let z = MIN_ZOOM; z <= MAX_ZOOM; z++) {
+  bounds[z] = {
+    xMin: lngToX(BBOX.west, z),
+    xMax: lngToX(BBOX.east, z),
+    yMin: latToY(BBOX.north, z),
+    yMax: latToY(BBOX.south, z),
+  };
+}
+
+// px, py = top-left corner of the 240x240 viewport in global pixel coords
+let z = 17;
+let px = Math.floor((bounds[z].xMin + bounds[z].xMax) / 2) * T;
+let py = Math.floor((bounds[z].yMin + bounds[z].yMax) / 2) * T;
+
+const viewport = document.getElementById('viewport');
+const coordEl = document.getElementById('coord');
+const statusEl = document.getElementById('status');
+
+function clamp() {
+  const b = bounds[z];
+  px = Math.max(b.xMin * T, Math.min(b.xMax * T, px));
+  py = Math.max(b.yMin * T, Math.min(b.yMax * T, py));
+}
+
+function update() {
+  clamp();
+  // Which tiles are visible
+  const txMin = Math.floor(px / T);
+  const txMax = Math.floor((px + T - 1) / T);
+  const tyMin = Math.floor(py / T);
+  const tyMax = Math.floor((py + T - 1) / T);
+
+  viewport.innerHTML = '';
+  for (let ty = tyMin; ty <= tyMax; ty++) {
+    for (let tx = txMin; tx <= txMax; tx++) {
+      const img = document.createElement('img');
+      img.src = `tiles/${z}/${tx}/${ty}.png`;
+      img.style.cssText = `position:absolute;width:${T}px;height:${T}px;`
+        + `left:${tx * T - px}px;top:${ty * T - py}px;`;
+      img.draggable = false;
+      viewport.appendChild(img);
+    }
+  }
+
+  // Center of viewport in tile coords
+  const cx = ((px + T / 2) / T).toFixed(1);
+  const cy = ((py + T / 2) / T).toFixed(1);
+  coordEl.textContent = `z${z} / ${cx} / ${cy}`;
+
+  const b = bounds[z];
+  const cols = b.xMax - b.xMin + 1;
+  const rows = b.yMax - b.yMin + 1;
+  statusEl.textContent = `${cols}×${rows} tiles at this zoom`;
+}
+
+function zoomTo(newZ) {
+  if (newZ < MIN_ZOOM || newZ > MAX_ZOOM) return;
+  const scale = Math.pow(2, newZ - z);
+  // Keep viewport center fixed
+  const cx = px + T / 2;
+  const cy = py + T / 2;
+  px = Math.round(cx * scale - T / 2);
+  py = Math.round(cy * scale - T / 2);
+  z = newZ;
+  clamp();
+  update();
+}
+
+document.addEventListener('keydown', (e) => {
+  switch (e.key) {
+    case 'ArrowLeft':  px -= STEP; break;
+    case 'ArrowRight': px += STEP; break;
+    case 'ArrowUp':    py -= STEP; break;
+    case 'ArrowDown':  py += STEP; break;
+    case '+': case '=': zoomTo(z + 1); return;
+    case '-': case '_': zoomTo(z - 1); return;
+    default: return;
+  }
+  e.preventDefault();
+  update();
+});
+
+update();
+</script>
+</body>
+</html>
