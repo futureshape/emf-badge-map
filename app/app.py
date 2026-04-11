@@ -168,7 +168,7 @@ class MapApp(app.App):
 
         # Show loading and defer the actual fetch to next update()
         # Keep tile_path so we continue showing the previous tile
-        self.status = "Loading..."
+        self.status = "z{} {}/{}".format(z, x, y)
         self._needs_fetch = True
 
     def _fetch_tile(self):
@@ -295,12 +295,19 @@ class MapApp(app.App):
         except Exception as e:
             print("MapApp: draw error:", type(e).__name__, e, "path:", self.tile_path)
 
-        # Loading indicator in centre
+        # Loading indicator in centre — pill shape
         if self._needs_fetch or self.loading:
-            ctx.font_size = 20
-            ctx.rgb(0, 0, 0).rectangle(-40, -14, 80, 28).fill()
+            import math
+            R = 14  # pill radius (half-height)
+            W = 52  # half-width of centre rectangle
+            ctx.rgb(0, 0, 0)
+            ctx.arc(-W, 0, R, 0, 2 * math.pi, False).fill()
+            ctx.arc( W, 0, R, 0, 2 * math.pi, False).fill()
+            ctx.rectangle(-W, -R, W * 2, R * 2).fill()
+            ctx.font_size = 18
             ctx.rgb(1, 1, 1).text_align = ctx.CENTER
-            ctx.move_to(0, 7).text("Loading...")
+            ctx.move_to(0, 6).text("Loading...")
+            ctx.text_align = ctx.LEFT
 
         # Status bar at the bottom
         ctx.font_size = 16
