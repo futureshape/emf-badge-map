@@ -1,0 +1,13 @@
+[app]
+name = "EMF Map"
+category = "Badge"
+
+[entry]
+class = "MapApp"
+
+[metadata]
+author = "futureshape"
+license = "MIT"
+url = "https://www.github.com/futureshape/emf-badge-map"
+description = "Browse the EMF Camp site map on your badge."
+version = "0.0.1"

@@ -67,3 +67,34 @@ python -m http.server 8000
 ## Deployment
 
 Pushing to `main` automatically deploys the viewer and tiles to GitHub Pages via the workflow in `.github/workflows/deploy.yml`. Enable it once in **Settings → Pages → Source: GitHub Actions**.
+
+## Tildagon badge app
+
+`app/` contains a [Tildagon](https://tildagon.badge.emfcamp.org/) badge app that fetches and displays the map tiles on the badge's 240×240 round screen.
+
+### Controls
+
+| Button | Action |
+|---|---|
+| Up / Down / Left / Right | Pan the map by one tile |
+| Confirm | Zoom in |
+| Cancel | Zoom out (at minimum zoom, exits the app) |
+
+### How it works
+
+- On startup the app connects to Wi-Fi and clears any locally cached tiles.
+- When you navigate, a "Loading..." overlay is shown on top of the current tile while the next one is fetched over HTTPS from GitHub Pages.
+- Tiles are cached to the app's `/cache/` folder on the badge filesystem. Up to 20 tiles are kept; older ones are evicted automatically.
+- The display uses `ctx.image()` to render the 256×256 PNG tile centred on the 240px round screen.
+
+### Installing on the badge
+
+Copy the app to your badge using `mpremote`:
+
+```bash
+mpremote mkdir :apps/emf_map
+mpremote cp app/app.py :apps/emf_map/app.py
+mpremote cp app/tildagon.toml :apps/emf_map/tildagon.toml
+```
+
+Then reboot the badge. The app will appear in the launcher as **EMF Map**.
