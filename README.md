@@ -25,7 +25,8 @@ map.emfcamp.org  ──►  render_tiles.js  ──►  tiles/{z}/{x}/{y}.png
 
 Key details:
 
-- **Source tiles** are gzip-compressed PBF served from `map.emfcamp.org/maps/buildmap/{z}/{x}/{y}.pbf`. The renderer decompresses them before passing to MapLibre Native.
+- **Source tiles** are vector PBF served from `map.emfcamp.org/tiles/_main/{z}/{x}/{y}`. The renderer still handles gzip-compressed responses when present.
+- **Style parity**: rendering uses `web-map-style.json`, generated from `emfcamp/map` web style sources (`web/src/style/map_style.ts` + `web/src/style/basemap.ts`) so tile styling matches the live map schema.
 - **Render resolution**: MapLibre Native's internal tile size is 512px. The renderer requests 512×512 and downscales to 256×256 via [sharp](https://sharp.pixelplumbing.com/) to ensure correct geographic alignment at tile boundaries. Text sizes in the style are doubled to compensate.
 - **Zoom 20** is the maximum zoom of the source data; rendering beyond this would show no additional detail.
 

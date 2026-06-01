@@ -25,6 +25,17 @@ const DEFAULT_BBOX = {
 const DEFAULT_MIN_ZOOM = 14;
 const DEFAULT_MAX_ZOOM = 20;
 
+function rewriteLegacyTileURL(url) {
+  // EMF 2026 map server moved from /maps/buildmap/{z}/{x}/{y}.pbf
+  // to /tiles/_main/{z}/{x}/{y}.
+  if (url.includes("/maps/buildmap/")) {
+    return url
+      .replace("/maps/buildmap/", "/tiles/_main/")
+      .replace(/\.pbf(?:\?.*)?$/, "");
+  }
+  return url;
+}
+
 // --- Tile math ---
 function lngToTileX(lng, zoom) {
   return Math.floor(((lng + 180) / 360) * (1 << zoom));
@@ -69,14 +80,15 @@ function getTileRanges(bbox, minZoom, maxZoom) {
 // --- Network fetcher ---
 function fetchURL(url) {
   return new Promise((resolve, reject) => {
-    const mod = url.startsWith("https") ? https : http;
+    const resolvedURL = rewriteLegacyTileURL(url);
+    const mod = resolvedURL.startsWith("https") ? https : http;
     mod
-      .get(url, (res) => {
+      .get(resolvedURL, (res) => {
         if (res.statusCode === 301 || res.statusCode === 302) {
           return fetchURL(res.headers.location).then(resolve, reject);
         }
         if (res.statusCode !== 200) {
-          return reject(new Error(`HTTP ${res.statusCode} for ${url}`));
+          return reject(new Error(`HTTP ${res.statusCode} for ${resolvedURL}`));
         }
         const chunks = [];
         res.on("data", (chunk) => chunks.push(chunk));
@@ -95,326 +107,43 @@ function fetchURL(url) {
 }
 
 // --- Style ---
-const STYLE = {
-  version: 8,
-  name: "EMF",
-  sources: {
-    site_plan: {
-      type: "vector",
-      tiles: ["https://map.emfcamp.org/maps/buildmap/{z}/{x}/{y}.pbf"],
-      minzoom: 7,
-      maxzoom: 20,
-    },
-    villages: {
-      type: "geojson",
-      data: { type: "FeatureCollection", features: [] },
-    },
-  },
-  glyphs: "https://map.emfcamp.org/fonts/{fontstack}/{range}.pbf",
-  layers: [
-    {
-      id: "background",
-      type: "background",
-      paint: { "background-color": "#DBE8A5" },
-    },
-    {
-      id: "bounding_box",
-      type: "fill",
-      source: "site_plan",
-      "source-layer": "bounding_box",
-      paint: { "fill-color": "#DBE8A5" },
-    },
-    {
-      id: "background_areas_camping_polygon",
-      type: "fill",
-      source: "site_plan",
-      "source-layer": "areas_camping_polygon",
-      paint: { "fill-color": "#AFC944" },
-    },
-    {
-      id: "background_areas_camping_outline",
-      type: "line",
-      source: "site_plan",
-      "source-layer": "areas_camping_polygon",
-      paint: {
-        "line-color": "rgba(10, 100, 10, 0.4)",
-        "line-blur": 7,
-        "line-width": 3,
-      },
-    },
-    {
-      id: "background_natural_woodland_polygon",
-      type: "fill",
-      source: "site_plan",
-      "source-layer": "natural_woodland_polygon",
-      paint: { "fill-color": "#528329" },
-    },
-    {
-      id: "background_natural_hedges_polygon",
-      type: "fill",
-      source: "site_plan",
-      "source-layer": "natural_hedges_polygon",
-      paint: { "fill-color": "#528329" },
-    },
-    {
-      id: "background_water_linestring",
-      type: "line",
-      source: "site_plan",
-      "source-layer": "natural_water_linestring",
-      layout: { "line-cap": "round", "line-join": "round" },
-      paint: {
-        "line-color": "#2EADD9",
-        "line-width": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          13, 1, 15, 2, 18, 6,
-        ],
-      },
-    },
-    {
-      id: "background_water_polygon_shadow",
-      type: "line",
-      source: "site_plan",
-      "source-layer": "natural_water_polygon",
-      paint: {
-        "line-color": "#1D718C",
-        "line-width": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          13, 0, 18, 2,
-        ],
-      },
-    },
-    {
-      id: "paths_tracks_case",
-      type: "line",
-      source: "site_plan",
-      "source-layer": "paths_roads_polygon",
-      layout: { "line-cap": "round", "line-join": "round" },
-      paint: {
-        "line-width": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          12, 0, 17, 5,
-        ],
-        "line-color": "rgba(132, 131, 131, 1)",
-        "line-blur": 0.5,
-      },
-    },
-    {
-      id: "paths_trackway",
-      type: "fill",
-      source: "site_plan",
-      "source-layer": "paths_trackway_polygon",
-      paint: { "fill-color": "rgba(185, 185, 185, 1)" },
-    },
-    {
-      id: "paths_tracks",
-      type: "fill",
-      source: "site_plan",
-      "source-layer": "paths_roads_polygon",
-      paint: {
-        "fill-color": "rgba(177, 165, 147, 1)",
-        "fill-outline-color": "rgba(98, 98, 97, 0)",
-      },
-    },
-    {
-      id: "structures_shadow",
-      type: "line",
-      source: "site_plan",
-      "source-layer": "structures_polygon",
-      layout: { "line-cap": "round", "line-join": "round" },
-      paint: {
-        "line-color": "rgba(0, 0, 0, 0.3)",
-        "line-width": 6,
-        "line-blur": 3,
-      },
-    },
-    {
-      id: "structures_polygon",
-      type: "fill",
-      source: "site_plan",
-      "source-layer": "structures_polygon",
-      paint: { "fill-color": "#F9E200" },
-    },
-    {
-      id: "structures_outline",
-      type: "line",
-      source: "site_plan",
-      "source-layer": "structures_polygon",
-      layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": "rgba(90, 81, 31, 1)" },
-    },
-    {
-      id: "structures_linestring",
-      type: "line",
-      source: "site_plan",
-      "source-layer": "structures_linestring",
-      layout: { "line-cap": "round", "line-join": "round" },
-      paint: { "line-color": "rgba(90, 81, 31, 1)" },
-    },
-    {
-      id: "boundary",
-      type: "line",
-      source: "site_plan",
-      "source-layer": "heras_perimeter__linestring",
-      layout: { "line-cap": "round", "line-join": "round" },
-      paint: {
-        "line-color": "rgba(226, 11, 11, 1)",
-        "line-dasharray": [10, 3],
-        "line-width": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          10, 1, 17, 2,
-        ],
-      },
-    },
-    {
-      id: "villages_symbol",
-      type: "circle",
-      source: "villages",
-      "source-layer": "",
-      minzoom: 16,
-      paint: {
-        "circle-color": "rgb(246, 163, 24)",
-        "circle-radius": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          16, 6, 24, 26,
-        ],
-        "circle-blur": 0.5,
-        "circle-stroke-width": 0.5,
-      },
-    },
-    {
-      id: "villages_text",
-      type: "symbol",
-      source: "villages",
-      "source-layer": "",
-      minzoom: 17,
-      maxzoom: 24,
-      layout: {
-        "text-field": "{name}",
-        "text-font": ["Open Sans Regular"],
-        "text-offset": [0, -1.8],
-        "text-size": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          17, 22, 24, 32,
-        ],
-      },
-      paint: {
-        "text-halo-color": "rgba(244, 235, 247, 0.73)",
-        "text-halo-width": 4,
-        "text-halo-blur": 2,
-      },
-    },
-    {
-      id: "labels_streets",
-      type: "symbol",
-      source: "site_plan",
-      "source-layer": "streets_linestring",
-      minzoom: 16,
-      layout: {
-        "text-field": "{name}",
-        "text-font": ["Open Sans Regular"],
-        "text-size": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          16, 16, 17, 18, 23, 100,
-        ],
-        "text-max-angle": 10,
-        "symbol-placement": "line",
-        "symbol-spacing": 500,
-      },
-      paint: {
-        "text-halo-color": "rgba(120, 120, 120, 1)",
-        "text-halo-width": 30,
-        "text-halo-blur": 80,
-        "text-color": "rgba(250, 250, 250, 1)",
-      },
-    },
-    {
-      id: "labels_main_1",
-      type: "symbol",
-      filter: ["==", ["get", "priority"], "1"],
-      source: "site_plan",
-      "source-layer": "labels_point",
-      minzoom: 15,
-      maxzoom: 20,
-      layout: {
-        "text-field": "{text}",
-        "text-font": ["Open Sans Regular"],
-        "text-size": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          15, 20, 23, 80,
-        ],
-        "text-optional": false,
-      },
-      paint: {
-        "text-halo-color": "rgba(241, 241, 241, 1)",
-        "text-halo-width": 6,
-        "text-halo-blur": 2,
-        "text-color": "rgba(0, 0, 0, 1)",
-      },
-    },
-    {
-      id: "labels_main_2",
-      type: "symbol",
-      filter: ["==", ["get", "priority"], "2"],
-      source: "site_plan",
-      "source-layer": "labels_point",
-      minzoom: 16,
-      maxzoom: 21,
-      layout: {
-        "text-field": "{text}",
-        "text-font": ["Open Sans Regular"],
-        "text-size": [
-          "interpolate",
-          ["linear"],
-          ["zoom"],
-          16, 12, 23, 60,
-        ],
-        "text-optional": false,
-      },
-      paint: {
-        "text-halo-color": "rgba(241, 241, 241, 1)",
-        "text-halo-width": 6,
-        "text-halo-blur": 2,
-        "text-color": "rgba(0, 0, 0, 1)",
-      },
-    },
-    {
-      id: "labels_main_3",
-      type: "symbol",
-      filter: ["!", ["has", "priority"]],
-      source: "site_plan",
-      "source-layer": "labels_point",
-      minzoom: 17.5,
-      layout: {
-        "text-field": "{text}",
-        "text-font": ["Open Sans Regular"],
-        "text-size": 26,
-        "text-optional": false,
-      },
-      paint: {
-        "text-halo-color": "rgba(241, 241, 241, 1)",
-        "text-halo-width": 6,
-        "text-halo-blur": 2,
-        "text-color": "rgba(0, 0, 0, 1)",
-      },
-    },
-  ],
-};
+const STYLE = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "web-map-style.json"), "utf8")
+);
+
+function applyOfficialDefaultVisibility(style) {
+  // Mirrors the official web map defaults:
+  // enabled: Background, Structures, Paths
+  // disabled: Slope, Hillshade, Aerial Imagery, Buried Services, Lighting
+  const layerPrefixes = {
+    Background: "background_",
+    Slope: "slope",
+    Hillshade: "hillshade",
+    "Aerial Imagery": "ortho",
+    Structures: "structures_",
+    Paths: "paths_",
+    "Buried Services": "services_",
+    Lighting: "lighting_",
+  };
+  const enabledByDefault = new Set(["Background", "Structures", "Paths"]);
+
+  style.layers = style.layers.map((layer) => {
+    for (const [groupName, prefix] of Object.entries(layerPrefixes)) {
+      if (layer.id.startsWith(prefix)) {
+        const layout = layer.layout ? { ...layer.layout } : {};
+        layout.visibility = enabledByDefault.has(groupName)
+          ? "visible"
+          : "none";
+        return { ...layer, layout };
+      }
+    }
+    return layer;
+  });
+
+  return style;
+}
+
+applyOfficialDefaultVisibility(STYLE);
 
 // --- Render a single tile ---
 function renderTile(map, z, x, y) {

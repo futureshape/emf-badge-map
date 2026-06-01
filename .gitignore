@@ -1,1 +1,3 @@
 node_modules/
+app-test/
+preload_tiles.py
