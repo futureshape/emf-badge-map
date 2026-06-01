@@ -2,6 +2,8 @@
 name = "EMF Map"
 category = "Apps"
 
+wifi_preference = true
+
 [entry]
 class = "MapApp"
 
