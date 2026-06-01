@@ -51,6 +51,23 @@ Example — render only zoom 18–20:
 node render_tiles.js --min-zoom 18 --max-zoom 20
 ```
 
+### Optimising tile file size
+
+After rendering, compress tiles with `pngquant` to reduce file size by ~80–85%.
+
+```bash
+brew install pngquant   # macOS; skip if already installed
+./compress_tiles.sh
+```
+
+The script compresses all tiles in `tiles/` in place using `--quality=65-90`, prints per-tile savings, and summarises total size reduction. It is safe to re-run — tiles that would grow are skipped automatically.
+
+To compress a different directory:
+
+```bash
+./compress_tiles.sh path/to/tiles
+```
+
 ## Viewer
 
 Open `badge-viewer.html` (served via any HTTP server, or from the GitHub Pages URL) to browse the rendered tiles in a 240px round badge preview.
