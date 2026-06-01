@@ -174,7 +174,7 @@ async function main() {
   const args = process.argv.slice(2);
   let minZoom = DEFAULT_MIN_ZOOM;
   let maxZoom = DEFAULT_MAX_ZOOM;
-  let outputDir = "tiles";
+  let outputDir = path.join(__dirname, "tiles");
 
   for (let i = 0; i < args.length; i += 2) {
     if (args[i] === "--min-zoom") minZoom = parseInt(args[i + 1]);

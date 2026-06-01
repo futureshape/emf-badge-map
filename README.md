@@ -19,7 +19,7 @@ Tiles are served via [GitHub Pages](https://futureshape.github.io/emf-badge-map/
 Vector tiles are fetched from the [EMF map server](https://map.emfcamp.org/) and rendered offline using [MapLibre GL Native](https://github.com/maplibre/maplibre-native) (Node.js).
 
 ```
-map.emfcamp.org  ──►  render_tiles.js  ──►  tiles/{z}/{x}/{y}.png
+map.emfcamp.org  ──►  tileserver/render_tiles.js  ──►  tileserver/tiles/{z}/{x}/{y}.png
  (vector PBF)         (MapLibre Native)       (raster PNG 256px)
 ```
 
@@ -33,6 +33,7 @@ Key details:
 ### Running the renderer
 
 ```bash
+cd tileserver
 npm install
 node render_tiles.js
 ```
@@ -42,7 +43,7 @@ Options:
 ```
 --min-zoom  N    Minimum zoom level to render (default: 14)
 --max-zoom  N    Maximum zoom level to render (default: 20)
---output    DIR  Output directory (default: tiles)
+--output    DIR  Output directory (default: tileserver/tiles)
 ```
 
 Example — render only zoom 18–20:
@@ -57,7 +58,7 @@ After rendering, compress tiles with `pngquant` to reduce file size by ~80–85%
 
 ```bash
 brew install pngquant   # macOS; skip if already installed
-./compress_tiles.sh
+./tileserver/compress_tiles.sh
 ```
 
 The script compresses all tiles in `tiles/` in place using `--quality=65-90`, prints per-tile savings, and summarises total size reduction. It is safe to re-run — tiles that would grow are skipped automatically.
@@ -65,12 +66,12 @@ The script compresses all tiles in `tiles/` in place using `--quality=65-90`, pr
 To compress a different directory:
 
 ```bash
-./compress_tiles.sh path/to/tiles
+./tileserver/compress_tiles.sh path/to/tiles
 ```
 
 ## Viewer
 
-Open `badge-viewer.html` (served via any HTTP server, or from the GitHub Pages URL) to browse the rendered tiles in a 240px round badge preview.
+Open `tileserver/badge-viewer.html` (served via any HTTP server, or from the GitHub Pages URL) to browse the rendered tiles in a 240px round badge preview.
 
 | Key | Action |
 |---|---|
@@ -78,7 +79,7 @@ Open `badge-viewer.html` (served via any HTTP server, or from the GitHub Pages U
 | `+` / `-` | Zoom in / out |
 
 ```bash
-python -m http.server 8000
+python -m http.server 8000 --directory tileserver
 # open http://localhost:8000/badge-viewer.html
 ```
 
@@ -110,9 +111,7 @@ Pushing to `main` automatically deploys the viewer and tiles to GitHub Pages via
 Copy the app to your badge using `mpremote`:
 
 ```bash
-mpremote mkdir :apps/emf_map
-mpremote cp app/app.py :apps/emf_map/app.py
-mpremote cp app/tildagon.toml :apps/emf_map/tildagon.toml
+./deploy_app.sh
 ```
 
 Then reboot the badge. The app will appear in the launcher as **EMF Map**.

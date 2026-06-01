@@ -1,0 +1,6 @@
+# Files that should not be downloaded to the badge by the app store.
+# The app store uses `git archive` which respects export-ignore.
+README.md export-ignore
+tileserver/ export-ignore
+deploy_app.sh export-ignore
+.github/ export-ignore

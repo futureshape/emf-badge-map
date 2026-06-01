@@ -10,7 +10,7 @@ echo "Creating app directory on badge..."
 mpremote mkdir ":$APP_DIR" 2>/dev/null || true
 
 echo "Copying app files..."
-for f in app/app.py app/metadata.json app/tildagon.toml; do
+for f in app.py metadata.json tildagon.toml; do
   dest="$APP_DIR/$(basename "$f")"
   echo "  $f -> :$dest"
   mpremote cp "$f" ":$dest"

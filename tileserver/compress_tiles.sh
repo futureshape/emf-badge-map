@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-TILES_DIR="${1:-tiles}"
+TILES_DIR="${1:-$(dirname "$0")/tiles}"
 
 if ! command -v pngquant &>/dev/null; then
   echo "pngquant not found. Install with: brew install pngquant"

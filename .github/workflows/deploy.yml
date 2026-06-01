@@ -26,8 +26,8 @@ jobs:
       - name: Assemble site
         run: |
           mkdir _site
-          cp badge-viewer.html _site/index.html
-          cp -r tiles _site/tiles
+          cp tileserver/badge-viewer.html _site/index.html
+          cp -r tileserver/tiles _site/tiles
 
       - uses: actions/configure-pages@v5
 
